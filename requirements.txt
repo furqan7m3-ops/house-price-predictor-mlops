@@ -4,3 +4,4 @@ seaborn
 matplotlib
 zenml[local]
 zenml[server]
+scikit-learn
