@@ -14,7 +14,14 @@ class DropMissingValuesStrategy(HandleMissingValuesStrategy):
     
     def handle(self, df: pd.DataFrame)->pd.DataFrame:
         logging.info(f"Drop missing values with axis= {self.axis} and thresh= {self.thresh}")
-        df_cleaned = df.dropna(axis=self.axis, thresh=self.thresh)
+        df_cleaned = df.copy()
+        if self.axis==0:
+            missing_values_percent = df.isnull().sum() / len(df) * 100
+            cols_to_drop = missing_values_percent[missing_values_percent >= 0.4].index
+            df_cleaned = df.drop(columns=cols_to_drop)
+        else:
+            df_cleaned = df.dropna(axis=self.axis, thresh=self.thresh)
+
         logging.info("Missing Values dropped successfully")
         return df_cleaned
 
@@ -33,7 +40,7 @@ class FillMissingValuesStrategy(HandleMissingValuesStrategy):
             numerical_cols = cleaned_df.select_dtypes(include='number').columns
             cleaned_df[numerical_cols] = cleaned_df[numerical_cols].fillna(cleaned_df[numerical_cols].median())
         elif self.method == 'mode':
-            categorical_cols = cleaned_df.select_dtypes(include='object')
+            categorical_cols = cleaned_df.select_dtypes(include=['object', 'category']).columns
             cleaned_df[categorical_cols] = cleaned_df[categorical_cols].fillna(cleaned_df[categorical_cols].mode())
         elif self.method == 'constant':
             if self.fill_value:
@@ -41,6 +48,7 @@ class FillMissingValuesStrategy(HandleMissingValuesStrategy):
         else:
             logging.info("Invalid Value for method valid valuese are: mean, median, mode and constant")
             raise ValueError("Invalid Value for method valid valuese are: mean, median, mode and constant")
+        return cleaned_df
 
 class MissingValuesHandler:
     def __init__(self, strategy: HandleMissingValuesStrategy):
@@ -49,4 +57,4 @@ class MissingValuesHandler:
         self.strategy = strategy
     
     def handle(self, df: pd.DataFrame) -> pd.DataFrame:
-        self.strategy.handle(df)
+        return  self.strategy.handle(df)
